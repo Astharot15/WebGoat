@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -61,6 +62,16 @@ public class ProfileZipSlip extends ProfileUploadBase {
     var tmpZipDirectory = Files.createTempDirectory(getWebSession().getUserName());
     cleanupAndCreateDirectoryForUser();
     var currentImage = getProfilePictureAsBase64();
+
+    // Repaired the path traversal vulnerability
+    String targetDirectory = ""; // Path to the directory where the file should be extracted
+
+    Path targetPath = new File(targetDirectory).toPath().normalize();
+    File fileToExtract = new File(targetPath + file.getOriginalFilename());
+
+    if (!fileToExtract.toPath().startsWith(targetPath)) {
+      return failed(this).output("path-traversal-zip-slip.invalid-path").build();
+    }
 
     try {
       var uploadedZipFile = tmpZipDirectory.resolve(file.getOriginalFilename());
